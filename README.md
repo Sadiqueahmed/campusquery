@@ -7,7 +7,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4+-38B2AC.svg?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg?style=flat&logo=sqlite&logoColor=white)](https://www.sqlite.org)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
-[![Tests](https://img.shields.io/badge/Tests-22%2F22%20Passing-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](backend/tests/)
+[![Tests](https://img.shields.io/badge/Tests-25%2F25%20Passing-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](backend/tests/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat)](LICENSE)
 
 CampusQuery is a full-stack, enterprise-grade AI system that enables university staff, advisors, and students to query student records, academic performance, and course enrollments using plain English. 
@@ -195,6 +195,22 @@ Frontend will be live at `http://localhost:5173`. Open in your browser to start 
 
 ---
 
+### Alternative: Run with Docker Compose (Single Command) 🐳
+
+You can launch both the full-stack backend and built frontend in a single containerized environment:
+
+```bash
+# 1. Configure your API key
+cp backend/.env.example backend/.env
+# Edit backend/.env with your GEMINI_API_KEY or GROQ_API_KEY
+
+# 2. Build and launch
+docker compose up --build
+```
+The entire application will be live at `http://localhost:8000` with automated health checks, SQLite initialization, and static file delivery.
+
+---
+
 ## 📡 API Reference
 
 ### 1. Health Check
@@ -263,6 +279,12 @@ Frontend will be live at `http://localhost:5173`. Open in your browser to start 
 ```
 * **Response**: Binary streaming `text/csv; charset=utf-8` with UTF-8 BOM (`\ufeff`) for direct Excel rendering and `Content-Disposition: attachment; filename="query_results.csv"`.
 
+### 4. Query History Management
+* **List History**: `GET /api/history`
+  * Returns recent queries (up to 50), timestamps, statuses (`success`, `refused`, `error`), and row counts.
+* **Clear History**: `DELETE /api/history`
+  * Clears the in-memory query history ring buffer: `{"cleared": true}`.
+
 ---
 
 ## 🧪 Testing & Verification Suite
@@ -290,38 +312,44 @@ pytest tests/ -v
 
 ```
 campusquery/
+├── Dockerfile                    # Multi-stage production container build
+├── docker-compose.yml            # Container orchestration with healthchecks
+├── docker-entrypoint.sh          # Container runtime seed & startup
+├── LICENSE                       # MIT License
 ├── backend/
 │   ├── .env.example              # Template for API credentials
 │   ├── database.py               # Read-only SQLite connection, authorizer & helpers
+│   ├── history.py                # In-memory query history store
 │   ├── llm_client.py             # Agnostic LLM driver (Gemini, Groq, Ollama)
-│   ├── main.py                   # FastAPI app with health, chat, export endpoints
+│   ├── main.py                   # FastAPI app with health, chat, export, history endpoints
 │   ├── query_engine.py           # 3-step Text-to-SQL & answer synthesis pipeline
-│   ├── requirements.txt          # Production dependencies
+│   ├── requirements.txt          # Production dependencies (FastAPI, SlowAPI, Pytest)
 │   ├── seed.py                   # Deterministic database population script
 │   ├── sql_validator.py          # Security scanner & AST sanitization
 │   └── tests/
+│       ├── test_api.py           # FastAPI endpoint & CSV export integration tests
+│       ├── test_database.py      # Hardened database sandbox security tests
 │       └── test_sql_validator.py # 22-point validator security test suite
 ├── docs/
 │   └── screenshots/              # High-resolution application screenshots
-│       ├── 01-empty-state.png
-│       ├── 02-query-answer.png
-│       ├── 03-sql-panel.png
-│       ├── 04-csv-download.png
-│       └── 05-refusal.png
 ├── frontend/
-│   ├── index.html                # Entry point
+│   ├── index.html                # Entry point with anti-FOUC theme detector
 │   ├── package.json              # React 18, Tailwind, Lucide dependencies
-│   ├── tailwind.config.js        # UI utility styling
+│   ├── tailwind.config.js        # UI utility styling with class-based dark mode
 │   ├── vite.config.js            # Development bundler configuration
 │   └── src/
 │       ├── App.jsx               # Main chat container & state orchestrator
-│       ├── api.js                # Frontend HTTP client
+│       ├── api.js                # Frontend HTTP client (chat, CSV, history, health)
 │       ├── index.css             # Tailwind directives & animations
 │       ├── main.jsx              # DOM root mount
+│       ├── hooks/
+│       │   └── useTheme.js       # Light/Dark mode state with localStorage sync
 │       └── components/
 │           ├── ChatMessage.jsx   # Assistant/user bubbles, badges & CSV triggers
+│           ├── HistoryDrawer.jsx # Slide-out query history drawer & re-run action
 │           ├── SampleQuestions.jsx # Quickstart prompt pills
-│           └── SqlResultPanel.jsx  # Collapsible syntax-highlighted SQL & table
+│           ├── SqlResultPanel.jsx  # Collapsible syntax-highlighted SQL & table
+│           └── ThemeToggle.jsx   # Animated Sun/Moon theme switcher
 ├── .gitignore                    # Strictly ignores .env, *.db, venv, node_modules
 └── README.md                     # Production documentation
 ```

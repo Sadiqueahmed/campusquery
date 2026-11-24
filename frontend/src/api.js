@@ -43,3 +43,17 @@ export async function checkHealth() {
   const res = await fetch(`${API_BASE}/health`);
   return (await handleResponse(res)).json();
 }
+
+/** GET /api/history */
+export async function fetchHistory() {
+  const res = await fetch(`${API_BASE}/history`);
+  return (await handleResponse(res)).json();
+}
+
+/** DELETE /api/history */
+export async function clearHistory() {
+  const res = await fetch(`${API_BASE}/history`, {
+    method: 'DELETE',
+  });
+  return (await handleResponse(res)).json();
+}

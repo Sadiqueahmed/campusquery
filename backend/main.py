@@ -1,19 +1,31 @@
 """
-main.py — FastAPI application with 3 endpoints: health, chat, export-csv.
+main.py — FastAPI application with health, chat, export-csv, and query history endpoints.
 """
 
 import csv
 import io
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+
+    _HAS_SLOWAPI = True
+except ImportError:
+    _HAS_SLOWAPI = False
 
 import database
 import llm_client
+import history
 from query_engine import process_question
 from sql_validator import validate, ValidationError
 
@@ -31,10 +43,33 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CampusQuery API", version="1.0.0", lifespan=lifespan)
 
+# Rate limiter (graceful fallback when slowapi is not installed)
+if _HAS_SLOWAPI:
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+else:
+    limiter = None
+    logger.warning(
+        "slowapi not installed — rate limiting disabled. "
+        "Run 'pip install slowapi' to enable it."
+    )
+
+
+def _noop_limit(*_args, **_kwargs):
+    """Passthrough decorator used when slowapi is not installed."""
+    def _wrap(fn):
+        return fn
+    return _wrap
+
+
+_rate_limit = limiter.limit if limiter else _noop_limit
+
 # CORS for the Vite dev server
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -105,7 +140,8 @@ async def health():
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest):
+@_rate_limit("30/minute")
+async def chat_endpoint(request: Request, req: ChatRequest):
     if not database.db_exists():
         return ChatResponse(
             answer="Database not found. Please run 'python seed.py' to set up the database.",
@@ -119,6 +155,21 @@ async def chat_endpoint(req: ChatRequest):
     if result.get("error"):
         error = ErrorDetail(**result["error"])
 
+    # Determine status for history tracking
+    if error:
+        status = "refused" if error.code in ("cannot_answer", "blocked_unsafe_sql") else "error"
+    else:
+        status = "success"
+
+    # Log in history
+    history.add_entry(
+        question=req.question,
+        sql=result.get("sql"),
+        answer=result["answer"],
+        row_count=result.get("row_count", 0),
+        status=status,
+    )
+
     return ChatResponse(
         answer=result["answer"],
         sql=result.get("sql"),
@@ -130,8 +181,22 @@ async def chat_endpoint(req: ChatRequest):
     )
 
 
+@app.get("/api/history")
+async def get_history_endpoint():
+    """Return the recent query history."""
+    return history.get_history()
+
+
+@app.delete("/api/history")
+async def clear_history_endpoint():
+    """Clear query history."""
+    history.clear_history()
+    return {"cleared": True}
+
+
 @app.post("/api/export-csv")
-async def export_csv(req: ExportRequest):
+@_rate_limit("20/minute")
+async def export_csv(request: Request, req: ExportRequest):
     """Re-validate and re-execute the SQL, then stream as CSV."""
     # Validate again — never trust client-sent SQL
     try:
@@ -173,3 +238,19 @@ async def export_csv(req: ExportRequest):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="query_results.csv"'},
     )
+
+
+# ── Production static frontend serving (Docker or single-port) ──
+_DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if _DIST_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=_DIST_DIR / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Don't catch /api
+        if full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        target = _DIST_DIR / full_path
+        if target.is_file():
+            return FileResponse(target)
+        return FileResponse(_DIST_DIR / "index.html")

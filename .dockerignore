@@ -1,0 +1,12 @@
+.git
+.gitignore
+.DS_Store
+*.pyc
+__pycache__/
+.pytest_cache/
+backend/venv/
+backend/student_data.db
+backend/.env
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

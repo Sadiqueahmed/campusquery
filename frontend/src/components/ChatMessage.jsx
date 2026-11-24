@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Copy, Check, Download, Loader2, AlertTriangle, ShieldAlert, GraduationCap, User } from 'lucide-react';
+import { Download, Loader2, AlertTriangle, ShieldAlert, GraduationCap, User } from 'lucide-react';
 import SqlResultPanel from './SqlResultPanel';
 import { exportCsv } from '../api';
 
@@ -9,11 +9,11 @@ export default function ChatMessage({ message }) {
   if (message.role === 'user') {
     return (
       <div className="flex items-start gap-3 justify-end">
-        <div className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[80%] shadow-sm">
+        <div className="bg-indigo-600 dark:bg-indigo-700 text-white rounded-2xl rounded-tr-xs px-4 py-2.5 max-w-[80%] shadow-xs">
           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
         </div>
-        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-          <User className="w-4 h-4 text-indigo-600" />
+        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center flex-shrink-0">
+          <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         </div>
       </div>
     );
@@ -47,34 +47,40 @@ export default function ChatMessage({ message }) {
 
   return (
     <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-        <GraduationCap className="w-4 h-4 text-indigo-600" />
+      <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center flex-shrink-0">
+        <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
       </div>
       <div className="max-w-[80%] space-y-2">
         {/* Answer bubble */}
-        <div className={`rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm ${
-          isBlocked ? 'bg-red-50 border border-red-200' :
-          isRefusal ? 'bg-amber-50 border border-amber-200' :
-          isServerError ? 'bg-red-50 border border-red-200' :
-          'bg-white border border-gray-200'
+        <div className={`rounded-2xl rounded-tl-xs px-4 py-2.5 shadow-xs ${
+          isBlocked ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60' :
+          isRefusal ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60' :
+          isServerError ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60' :
+          'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800'
         }`}>
           {/* Error icon for blocked/refusal */}
           {(isBlocked || isRefusal) && (
             <div className="flex items-center gap-1.5 mb-1.5">
               {isBlocked ? (
-                <><ShieldAlert className="w-4 h-4 text-red-500" /><span className="text-xs font-medium text-red-600">Blocked for safety</span></>
+                <>
+                  <ShieldAlert className="w-4 h-4 text-red-500 dark:text-red-400" />
+                  <span className="text-xs font-medium text-red-600 dark:text-red-400">Blocked for safety</span>
+                </>
               ) : (
-                <><AlertTriangle className="w-4 h-4 text-amber-500" /><span className="text-xs font-medium text-amber-600">Can&apos;t answer this</span></>
+                <>
+                  <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Can&apos;t answer this</span>
+                </>
               )}
             </div>
           )}
           {isServerError && (
             <div className="flex items-center gap-1.5 mb-1.5">
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="text-xs font-medium text-red-600">Error</span>
+              <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />
+              <span className="text-xs font-medium text-red-600 dark:text-red-400">Error</span>
             </div>
           )}
-          <p className="text-sm whitespace-pre-wrap">{answer}</p>
+          <p className="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200">{answer}</p>
         </div>
 
         {/* SQL & Results panel */}
@@ -87,7 +93,7 @@ export default function ChatMessage({ message }) {
           <button
             onClick={handleDownloadCsv}
             disabled={csvLoading}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors shadow-xs"
             aria-label="Download results as CSV"
           >
             {csvLoading ? (
