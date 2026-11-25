@@ -8,6 +8,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg?style=flat&logo=sqlite&logoColor=white)](https://www.sqlite.org)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![Tests](https://img.shields.io/badge/Tests-25%2F25%20Passing-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](backend/tests/)
+[![CI](https://github.com/Sadiqueahmed/campusquery/actions/workflows/ci.yml/badge.svg)](https://github.com/Sadiqueahmed/campusquery/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat)](LICENSE)
 
 CampusQuery is a full-stack, enterprise-grade AI system that enables university staff, advisors, and students to query student records, academic performance, and course enrollments using plain English. 
@@ -312,6 +313,9 @@ pytest tests/ -v
 
 ```
 campusquery/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # Automated GitHub Actions test & build workflow
 ├── Dockerfile                    # Multi-stage production container build
 ├── docker-compose.yml            # Container orchestration with healthchecks
 ├── docker-entrypoint.sh          # Container runtime seed & startup
@@ -346,9 +350,10 @@ campusquery/
 │       │   └── useTheme.js       # Light/Dark mode state with localStorage sync
 │       └── components/
 │           ├── ChatMessage.jsx   # Assistant/user bubbles, badges & CSV triggers
+│           ├── DataVisualization.jsx # Interactive metric & distribution charts
 │           ├── HistoryDrawer.jsx # Slide-out query history drawer & re-run action
 │           ├── SampleQuestions.jsx # Quickstart prompt pills
-│           ├── SqlResultPanel.jsx  # Collapsible syntax-highlighted SQL & table
+│           ├── SqlResultPanel.jsx  # Multi-tab panel: Table, Chart, and SQL
 │           └── ThemeToggle.jsx   # Animated Sun/Moon theme switcher
 ├── .gitignore                    # Strictly ignores .env, *.db, venv, node_modules
 └── README.md                     # Production documentation
